@@ -318,10 +318,7 @@
     <input class="c-input" id="name-input" type="text" placeholder="enter your name" autocomplete="off" spellcheck="false"/>
 
     <div class="field-label">Anthropic API key</div>
-    <input class="c-input" id="api-input" type="password" placeholder="sk-ant-..." autocomplete="off"/>
-    <div class="api-note">Never stored. Lives only in this session.</div>
-
-    <button class="enter-btn" id="enter-btn">Enter Cerebro</button>
+   <button class="enter-btn" id="enter-btn">Enter Cerebro</button>
   </div>
 
   <!-- CHAT -->
@@ -723,24 +720,19 @@ Read the ending as carefully as you read everything else. Some conversations clo
 IMPORTANT: Keep responses concise and conversational. You are not writing essays — you are talking with someone.`;
 
 // ── APP STATE ──────────────────────────────────────────────────────────
-let userName = '', apiKey = '', voiceOn = false, history = [];
+let userName = '', voiceOn = false, history = [];
 let synth = window.speechSynthesis, utter = null;
 
 // LANDING
 document.getElementById('enter-btn').addEventListener('click', startSession);
 document.getElementById('name-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('api-input').focus();
-});
-document.getElementById('api-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') startSession();
+ if (e.key === 'Enter') startSession();
 });
 
 function startSession() {
   const name = document.getElementById('name-input').value.trim();
-  const key  = document.getElementById('api-input').value.trim();
-  if (!name) { document.getElementById('name-input').focus(); return; }
-  if (!key || !key.startsWith('sk-')) { document.getElementById('api-input').focus(); return; }
-  userName = name; apiKey = key;
+if (!name) { document.getElementById('name-input').focus(); return; }
+  userName = name;
   document.getElementById('landing').classList.add('hidden');
   document.getElementById('chat-uname').textContent = userName.toLowerCase();
   setTimeout(() => {
