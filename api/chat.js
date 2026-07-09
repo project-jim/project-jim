@@ -35,16 +35,12 @@ console.log('API key starts with:', apiKey ? apiKey.substring(0, 10) : 'MISSING'
         messages: messages,
       }),
     });
+const data = await response.json();
 
-    const data = await response.json();
-
-    if (data.error) {
-      return res.status(500).json({ error: data.error.message });
-    }
-
-    return res.status(200).json(data);
-
-  } catch (error) {
-    return res.status(500).json({ error: error.message || 'Something went wrong reaching Jim.' });
-  }
+if (data.error) {
+  return res.status(500).json({ 
+    error: data.error.message,
+    type: data.error.type,
+    full: JSON.stringify(data.error)
+  });
 }

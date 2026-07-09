@@ -809,7 +809,7 @@ async function sendMsg(text) {
     });
     const data = await res.json();
     hideTyping();
-    if (data.error) { appendError(data.error.message || 'Something went wrong.'); return; }
+  if (data.error) { appendError((data.error || '') + ' | ' + (data.type || '') + ' | ' + (data.full || '')); return; }
     const reply = data.content?.[0]?.text || '';
     if (reply) {
       history.push({ role: 'assistant', content: reply });
