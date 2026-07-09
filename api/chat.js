@@ -1,3 +1,9 @@
+export const config = {
+  api: {
+    bodyParser: true,
+  },
+};
+
 export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -8,8 +14,11 @@ export default async function handler(req, res) {
     const { messages, system } = req.body;
 
     // Your Anthropic API key lives here, safely on the server
-    // It is never exposed to anyone using Jim
     const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({ error: 'API key not configured.' });
+    }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -35,6 +44,6 @@ export default async function handler(req, res) {
     return res.status(200).json(data);
 
   } catch (error) {
-    return res.status(500).json({ error: 'Something went wrong reaching Jim.' });
+    return res.status(500).json({ error: error.message || 'Something went wrong reaching Jim.' });
   }
 }
