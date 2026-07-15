@@ -87,12 +87,70 @@
     50%      { filter: drop-shadow(0 0 55px rgba(74,158,255,0.6)) drop-shadow(0 0 100px rgba(129,140,248,0.2)); }
   }
 
-  .jim-sub {
-    font-size: 0.72rem;
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
+.auth-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .auth-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
     color: var(--text-muted);
-    margin-top: -0.8rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.6rem 0;
+    cursor: pointer;
+    transition: all 0.3s;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+
+  .auth-tab.active {
+    color: var(--electric);
+    border-bottom-color: var(--electric);
+  }
+
+  .auth-tab:hover { color: var(--text-secondary); }
+
+  .auth-divider {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    margin: 0.3rem 0;
+  }
+
+  .google-btn {
+    background: transparent;
+    border: 1px solid var(--border-active);
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.65rem 0;
+    cursor: pointer;
+    transition: all 0.35s;
+    width: 100%;
+  }
+
+  .google-btn:hover {
+    border-color: var(--electric);
+    color: var(--pulse);
+  }
+
+  .auth-error {
+    color: rgba(248, 113, 113, 0.8);
+    font-size: 0.78rem;
+    text-align: center;
+    min-height: 1.2rem;
+    margin-top: 0.3rem;
   }
 
   .field-label {
@@ -310,14 +368,39 @@
 
 <div id="app">
   <!-- LANDING -->
-  <div id="landing">
+ <div id="landing">
     <div class="jim-wordmark">Jim</div>
     <div class="jim-sub">your creative companion</div>
 
-    <div class="field-label">Your name</div>
-    <input class="c-input" id="name-input" type="text" placeholder="enter your name" autocomplete="off" spellcheck="false"/>
+    <!-- AUTH TABS -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="showTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-register" onclick="showTab('register')">Register</button>
+    </div>
 
-    <button class="enter-btn" id="enter-btn">Enter</button>
+    <!-- LOGIN VIEW -->
+    <div id="view-login">
+      <div class="field-label">Email</div>
+      <input class="c-input" id="login-email" type="email" placeholder="your@email.com" autocomplete="off"/>
+      <div class="field-label">Password</div>
+      <input class="c-input" id="login-password" type="password" placeholder="••••••••" autocomplete="off"/>
+      <button class="enter-btn" id="login-btn">Sign In</button>
+      <div class="auth-divider">or</div>
+      <button class="google-btn" id="google-btn">Continue with Google</button>
+    </div>
+
+    <!-- REGISTER VIEW -->
+    <div id="view-register" style="display:none">
+      <div class="field-label">Your name</div>
+      <input class="c-input" id="reg-name" type="text" placeholder="your name" autocomplete="off"/>
+      <div class="field-label">Email</div>
+      <input class="c-input" id="reg-email" type="email" placeholder="your@email.com" autocomplete="off"/>
+      <div class="field-label">Password</div>
+      <input class="c-input" id="reg-password" type="password" placeholder="••••••••" autocomplete="off"/>
+      <button class="enter-btn" id="register-btn">Create Account</button>
+    </div>
+
+    <div class="auth-error" id="auth-error"></div>
   </div>
 
   <!-- CHAT -->
@@ -357,8 +440,8 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
 // ── THREE.JS CEREBRO ROOM ──────────────────────────────────────────────
 const container = document.getElementById('three-container');
 const renderer  = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -718,20 +801,77 @@ Read the ending as carefully as you read everything else. Some conversations clo
 
 IMPORTANT: Keep responses concise and conversational. You are not writing essays — you are talking with someone.`;
 
+// ── SUPABASE INIT ──────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://fsouknqpjvulbpbdqglm.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_gVEcWdhC7c-531ZboZcsqA_77bumWZN';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // ── APP STATE ──────────────────────────────────────────────────────────
 let userName = '', voiceOn = false, history = [];
 let synth = window.speechSynthesis, utter = null;
 
-// LANDING
-document.getElementById('enter-btn').addEventListener('click', startSession);
-document.getElementById('name-input').addEventListener('keydown', e => {
- if (e.key === 'Enter') startSession();
+// ── AUTH FUNCTIONS ─────────────────────────────────────────────────────
+function showTab(tab) {
+  document.getElementById('view-login').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('view-register').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+}
+
+function showAuthError(msg) {
+  document.getElementById('auth-error').textContent = msg;
+}
+
+document.getElementById('login-btn').addEventListener('click', async () => {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value.trim();
+  if (!email || !password) { showAuthError('Please enter your email and password.'); return; }
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) { showAuthError(error.message); return; }
+
+  userName = data.user.user_metadata?.name || email.split('@')[0];
+  enterJim();
 });
 
-function startSession() {
-  const name = document.getElementById('name-input').value.trim();
-if (!name) { document.getElementById('name-input').focus(); return; }
+document.getElementById('register-btn').addEventListener('click', async () => {
+  const name     = document.getElementById('reg-name').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value.trim();
+  if (!name || !email || !password) { showAuthError('Please fill in all fields.'); return; }
+
+  const { data, error } = await supabase.auth.signUp({
+    email, password,
+    options: { data: { name } }
+  });
+  if (error) { showAuthError(error.message); return; }
+
   userName = name;
+  enterJim();
+});
+
+document.getElementById('google-btn').addEventListener('click', async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: 'https://project-jim.vercel.app' }
+  });
+  if (error) { showAuthError(error.message); }
+});
+
+// Check if user returned from Google OAuth
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    userName = session.user.user_metadata?.name ||
+               session.user.user_metadata?.full_name ||
+               session.user.email.split('@')[0];
+    if (document.getElementById('landing') &&
+        !document.getElementById('landing').classList.contains('hidden')) {
+      enterJim();
+    }
+  }
+});
+
+function enterJim() {
   document.getElementById('landing').classList.add('hidden');
   document.getElementById('chat-uname').textContent = userName.toLowerCase();
   setTimeout(() => {
